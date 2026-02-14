@@ -80,7 +80,7 @@ export fn xorInt32Array() i32 {
 
     var total: i32 = 0;
 
-    for (0..lanes) |x| total ^= acc[0][x] ^ acc[1][x] ^ acc[2][x] ^ acc[3][x];
+    inline for (0..lanes) |x| total ^= acc[0][x] ^ acc[1][x] ^ acc[2][x] ^ acc[3][x];
 
     if (i < len) {
         for (values[i..len]) |x| total ^= x;
@@ -123,7 +123,7 @@ export fn sumFloat64Array() i32 {
 
     var total: f64 = 0;
 
-    for (0..lanes) |x| total += acc[0][x] + acc[1][x] + acc[2][x] + acc[3][x];
+    inline for (0..lanes) |x| total += acc[0][x] + acc[1][x] + acc[2][x] + acc[3][x];
 
     if (i < len) {
         for (values[i..len]) |x| total += x;
