@@ -1,5 +1,7 @@
 import assert from 'assert'
 
+const textEncoder = new TextEncoder()
+
 function alignUp(x: number, bytes: 4 | 8): number {
   const mask = bytes - 1
 
@@ -15,6 +17,9 @@ class Channel {
   storageFloat64: Float64Array
 
   constructor(buffer: ArrayBuffer, offset = 0, sizeInBytes = buffer.byteLength) {
+    assert(offset % 8 === 0)
+    assert(sizeInBytes % 8 === 0)
+    assert(offset + sizeInBytes <= buffer.byteLength)
     this.storageUint8 = new Uint8Array(buffer, offset, sizeInBytes / Uint8Array.BYTES_PER_ELEMENT)
     this.storageUint32 = new Uint32Array(buffer, offset, sizeInBytes / Uint32Array.BYTES_PER_ELEMENT)
     this.storageInt32 = new Int32Array(buffer, offset, sizeInBytes / Int32Array.BYTES_PER_ELEMENT)
@@ -47,11 +52,11 @@ class Channel {
   }
 
   advance8(count: number): void {
-    this.offset += count
-
-    if (this.offset > this.storageUint8.length) {
+    const next = this.offset + count
+    if (next > this.storageUint8.length) {
       throw Error('Reached end of channel')
     }
+    this.offset = next
   }
 
   advance32(count: number): void {
@@ -65,28 +70,33 @@ class Channel {
 
 export class Writer extends Channel {
   writeUint8(value: number): void {
-    this.storageUint8[this.offset8()] = value
+    const offset = this.offset8()
     this.advance8(1)
+    this.storageUint8[offset] = value
   }
 
   writeUint32(value: number): void {
-    this.storageUint32[this.offset32()] = value
+    const offset = this.offset32()
     this.advance32(1)
+    this.storageUint32[offset] = value
   }
 
   writeInt32(value: number): void {
-    this.storageInt32[this.offset32()] = value
+    const offset = this.offset32()
     this.advance32(1)
+    this.storageInt32[offset] = value
   }
 
   writeFloat32(value: number): void {
-    this.storageFloat32[this.offset32()] = value
+    const offset = this.offset32()
     this.advance32(1)
+    this.storageFloat32[offset] = value
   }
 
   writeFloat64(value: number): void {
-    this.storageFloat64[this.offset64()] = value
+    const offset = this.offset64()
     this.advance64(1)
+    this.storageFloat64[offset] = value
   }
 
   initUint8(): (value: number) => void {
@@ -205,28 +215,33 @@ export class Writer extends Channel {
   }
 
   copyUint8Elements(arr: Uint8Array | number[]): void {
-    this.storageUint8.set(arr, this.offset8())
+    const start = this.offset8()
     this.advance8(arr.length)
+    this.storageUint8.set(arr, start)
   }
 
   copyUint32Elements(arr: Uint32Array | number[]): void {
-    this.storageUint32.set(arr, this.offset32())
+    const start = this.offset32()
     this.advance32(arr.length)
+    this.storageUint32.set(arr, start)
   }
 
   copyInt32Elements(arr: Int32Array | number[]): void {
-    this.storageInt32.set(arr, this.offset32())
+    const start = this.offset32()
     this.advance32(arr.length)
+    this.storageInt32.set(arr, start)
   }
 
   copyFloat32Elements(arr: Float32Array | number[]): void {
-    this.storageFloat32.set(arr, this.offset32())
+    const start = this.offset32()
     this.advance32(arr.length)
+    this.storageFloat32.set(arr, start)
   }
 
   copyFloat64Elements(arr: Float64Array | number[]): void {
-    this.storageFloat64.set(arr, this.offset64())
+    const start = this.offset64()
     this.advance64(arr.length)
+    this.storageFloat64.set(arr, start)
   }
 
   copyUint8Array(arr: Uint8Array | number[]): void {
@@ -263,8 +278,7 @@ export class Writer extends Channel {
   }
 
   writeUtf8String(value: string): void {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(value)
+    const data = textEncoder.encode(value)
 
     this.copyUint8Array(data)
   }
@@ -272,88 +286,63 @@ export class Writer extends Channel {
 
 export class Reader extends Channel {
   readUint8(): number {
-    const result = this.storageUint8[this.offset8()]
-
+    const offset = this.offset8()
     this.advance8(1)
-
-    return result
+    return this.storageUint8[offset]
   }
 
   readUint32(): number {
-    const result = this.storageUint32[this.offset32()]
-
+    const offset = this.offset32()
     this.advance32(1)
-
-    return result
+    return this.storageUint32[offset]
   }
 
   readInt32(): number {
-    const result = this.storageInt32[this.offset32()]
-
+    const offset = this.offset32()
     this.advance32(1)
-
-    return result
+    return this.storageInt32[offset]
   }
 
   readFloat32(): number {
-    const result = this.storageFloat32[this.offset32()]
-
+    const offset = this.offset32()
     this.advance32(1)
-
-    return result
+    return this.storageFloat32[offset]
   }
 
   readFloat64(): number {
-    const result = this.storageFloat64[this.offset64()]
-
+    const offset = this.offset64()
     this.advance64(1)
-
-    return result
+    return this.storageFloat64[offset]
   }
 
   readUint8Elements(length: number): Uint8Array {
     const start = this.offset8()
-    const view = this.storageUint8.subarray(start, start + length)
-
     this.advance8(length)
-
-    return view
+    return this.storageUint8.subarray(start, start + length)
   }
 
   readUint32Elements(length: number): Uint32Array {
     const start = this.offset32()
-    const view = this.storageUint32.subarray(start, start + length)
-
     this.advance32(length)
-
-    return view
+    return this.storageUint32.subarray(start, start + length)
   }
 
   readInt32Elements(length: number): Int32Array {
     const start = this.offset32()
-    const view = this.storageInt32.subarray(start, start + length)
-
     this.advance32(length)
-
-    return view
+    return this.storageInt32.subarray(start, start + length)
   }
 
   readFloat32Elements(length: number): Float32Array {
     const start = this.offset32()
-    const view = this.storageFloat32.subarray(start, start + length)
-
     this.advance32(length)
-
-    return view
+    return this.storageFloat32.subarray(start, start + length)
   }
 
   readFloat64Elements(length: number): Float64Array {
     const start = this.offset64()
-    const view = this.storageFloat64.subarray(start, start + length)
-
     this.advance64(length)
-
-    return view
+    return this.storageFloat64.subarray(start, start + length)
   }
 
   readUint8Array(): Uint8Array {

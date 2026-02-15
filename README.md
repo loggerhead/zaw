@@ -1,7 +1,6 @@
 # `zaw`
 
 [![Zig](https://img.shields.io/github/actions/workflow/status/stylearcade/zaw/ci-build-zig.yml?label=Zig%200.16.0&logo=zig)](https://github.com/stylearcade/zaw/actions/workflows/ci-build-zig.yml)
-[![Rust](https://img.shields.io/github/actions/workflow/status/stylearcade/zaw/ci-build-rust.yml?label=Rust&logo=rust)](https://github.com/stylearcade/zaw/actions/workflows/ci-build-rust.yml)
 
 ## Zero-Allocation WASM @ <a href="https://stylearcade.com" target="_blank">Style Arcade</a>
 
@@ -40,7 +39,7 @@ And by targeting the _cheapest_ algorithm possible, we can see the performance o
 ## Getting Started
 
 - See our [getting started guide](docs/getting-started.md) for installation & code samples
-- Fork [zaw-starter-zig](https://github.com/stylearcade/zaw-starter-zig) or [zaw-starter-rust](https://github.com/stylearcade/zaw-starter-rust)
+- Fork [zaw-starter-zig](https://github.com/stylearcade/zaw-starter-zig)
 
 ## Repository Overview
 
@@ -58,7 +57,6 @@ In this repository you will find:
     - Go _(coming later)_
   - WASM
     - [Zig](implementations/wasm-zig/)
-    - [Rust](implementations/wasm-rust/)
 - [**Benchmarks**](docs/benchmarks.md)
   - XOR Int32Array
   - Sum Float64Array

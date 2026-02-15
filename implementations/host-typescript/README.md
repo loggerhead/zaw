@@ -108,33 +108,6 @@ export fn sumFloat64Array() i32 {
 }
 ```
 
-##### Rust
-
-```rust
-use zaw::interop;
-use zaw::interop::error::{Error, OK};
-
-// Setup all required WASM interop exports
-zaw::setup_interop!();
-
-#[no_mangle]
-pub extern "C" fn sumFloat64Array() -> i32 {
-    let input = interop::get_input();     // Get shared input buffer
-    let output = interop::get_output();   // Get shared output buffer
-
-    let values = input.read_array_f64();  // Read array from JS
-
-    let mut total = 0.0;
-    for value in values {
-        total += value;       // Simple sum (in reality, use SIMD)
-    }
-
-    output.write_f64(total);  // Write result back to JS
-
-    return OK;
-}
-```
-
 #### Error Handling
 
 ##### Zig
@@ -146,19 +119,5 @@ fn myFunction_inner() !void {
 
 export fn myFunction() i32 {
   return Error.handle(myFunction_inner);
-}
-```
-
-##### Rust
-
-```rust
-#[no_mangle]
-pub extern "C" myFunction() -> i32 {
-    fn inner() => Result<(), Error> {
-      // Your logic here
-    }
-
-    // Will serialize error and return to host (or just return OK)
-    interop::error::handle(inner)
 }
 ```

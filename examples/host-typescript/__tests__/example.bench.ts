@@ -2,15 +2,12 @@ import os from 'os'
 import { bench, describe } from 'vitest'
 import { builds } from './builds'
 import { initExample } from '../host'
-import { initRustBindgen } from '../../wasm-rust/api_bindgen'
 import { multiply4x4Float32 } from '../../utils'
 
 console.log(`--COPY OUTPUT FROM BELOW THIS LINE INTO benchmarks.md---\n\nRunning on ${os.cpus()[0].model}`)
 
 describe('Typescript example host', async () => {
   const zig = await initExample(builds.zig)
-  const rust = await initExample(builds.rust)
-  const rustBindgen = await initRustBindgen()
 
   for (const size of [10, 100, 1_000, 10_000, 100_000]) {
     describe(`XOR Int32Array @ ${size} elements`, () => {
@@ -26,14 +23,6 @@ describe('Typescript example host', async () => {
 
       bench('zig', () => {
         zig.xorInt32Array(values)
-      })
-
-      bench('rust', () => {
-        rust.xorInt32Array(values)
-      })
-
-      bench('rust-bindgen', () => {
-        rustBindgen.xorInt32Array(values)
       })
     })
   }
@@ -53,14 +42,6 @@ describe('Typescript example host', async () => {
       bench('zig', () => {
         zig.sumFloat64Array(values)
       })
-
-      bench('rust', () => {
-        rust.sumFloat64Array(values)
-      })
-
-      bench('rust-bindgen', () => {
-        rustBindgen.sumFloat64Array(values)
-      })
     })
   }
 
@@ -78,14 +59,6 @@ describe('Typescript example host', async () => {
 
       bench('zig', () => {
         zig.multiply4x4Float32(left, right)
-      })
-
-      bench('rust', () => {
-        rust.multiply4x4Float32(left, right)
-      })
-
-      bench('rust-bindgen', () => {
-        rustBindgen.multiply4x4Float32(left, right)
       })
     })
   }
