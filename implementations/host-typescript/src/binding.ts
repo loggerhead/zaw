@@ -1,5 +1,5 @@
 import { Reader, Writer } from './conduit'
-import { ZawReturn } from './types'
+import type { ZawReturn } from './types'
 
 type Generator = <Args extends unknown[], Result>(
   func: () => ZawReturn,

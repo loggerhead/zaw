@@ -23,6 +23,15 @@ const writeNullTerminated = (buffer: ArrayBuffer, offset: number, size: number, 
   view[length] = 0
 }
 
+const writeNullTerminatedUtf8 = (buffer: ArrayBuffer, offset: number, size: number, text: string): void => {
+  const view = new Uint8Array(buffer, offset, size)
+  view.fill(0)
+  const data = new TextEncoder().encode(text)
+  const length = Math.min(data.length, size - 1)
+  view.set(data.subarray(0, length), 0)
+  view[length] = 0
+}
+
 const writeFilled = (buffer: ArrayBuffer, offset: number, size: number, byte: number): void => {
   const view = new Uint8Array(buffer, offset, size)
   view.fill(byte)
@@ -216,7 +225,7 @@ describe('interop.createInstance', () => {
     instantiateMock.mockRestore()
   })
 
-  test('Given超大通道大小 When获取通道 Then抛出构造错误', async () => {
+  test('Given超大通道大小 When获取通道 Then返回可用通道', async () => {
     const givenOptions = createOptions({ inputChannelSize: 128 * 1024, outputChannelSize: 128 * 1024 })
     const givenPointers = { logPtr: 0, errorPtr: 256, inputPtr: 512, outputPtr: 1024 }
     const givenExports = createExports(givenPointers)
@@ -224,7 +233,7 @@ describe('interop.createInstance', () => {
     const givenWasmBuffer = Buffer.from([0, 97, 115, 109])
 
     const whenInstance = await createInstance(givenWasmBuffer, givenOptions)
-    expect(() => whenInstance.getInput()).toThrow()
+    expect(whenInstance.getInput()).toBeInstanceOf(Writer)
 
     instantiateMock.mockRestore()
   })
@@ -303,6 +312,75 @@ describe('interop.createInstance', () => {
     expect(func).toHaveBeenCalledTimes(1)
     expect(write).toHaveBeenCalledTimes(1)
     expect(read).toHaveBeenCalledTimes(1)
+
+    instantiateMock.mockRestore()
+  })
+
+  test('Given自定义imports When创建实例 Then透传wasi并合并env', async () => {
+    const givenOptions = createOptions({
+      imports: {
+        wasi_snapshot_preview1: { fd_write: vi.fn() },
+        env: { foo: 1 },
+      },
+    })
+    const givenPointers = { logPtr: 0, errorPtr: 256, inputPtr: 512, outputPtr: 1024 }
+    const givenExports = createExports(givenPointers)
+    let capturedImports: WebAssembly.Imports | undefined
+    const instantiateMock = createInstantiateMock(givenExports, imports => {
+      capturedImports = imports
+    })
+    const givenWasmBuffer = new Uint8Array([0, 97, 115, 109])
+
+    await createInstance(givenWasmBuffer, givenOptions)
+
+    expect(capturedImports?.wasi_snapshot_preview1).toBe(givenOptions.imports?.wasi_snapshot_preview1)
+    expect((capturedImports?.env as { foo?: number }).foo).toBe(1)
+    expect((capturedImports?.env as { memory?: WebAssembly.Memory }).memory).toBeInstanceOf(WebAssembly.Memory)
+
+    instantiateMock.mockRestore()
+  })
+
+  test('Given通道指针超出内存 When创建实例 Then扩容内存', async () => {
+    const memory = new WebAssembly.Memory({ initial: 1 })
+    const growSpy = vi.spyOn(memory, 'grow')
+    const givenOptions = createOptions({ memory })
+    const givenPointers = { logPtr: 0, errorPtr: 256, inputPtr: 70000, outputPtr: 120000 }
+    const givenExports = createExports(givenPointers)
+    const instantiateMock = createInstantiateMock(givenExports)
+    const givenWasmBuffer = new Uint8Array([0, 97, 115, 109])
+
+    await createInstance(givenWasmBuffer, givenOptions)
+
+    expect(growSpy).toHaveBeenCalled()
+    instantiateMock.mockRestore()
+  })
+
+  test.sequential('Given浏览器环境 When触发日志与错误 Then不依赖Buffer', async () => {
+    const originalBuffer = (globalThis as { Buffer?: typeof Buffer }).Buffer
+    ;(globalThis as { Buffer?: typeof Buffer }).Buffer = undefined
+    const givenLog = vi.fn()
+    const givenOptions = createOptions({ log: givenLog })
+    const givenPointers = { logPtr: 0, errorPtr: 256, inputPtr: 512, outputPtr: 1024 }
+    const givenExports = createExports(givenPointers)
+    let capturedImports: WebAssembly.Imports | undefined
+    const instantiateMock = createInstantiateMock(givenExports, imports => {
+      capturedImports = imports
+    })
+    const givenWasmBuffer = new Uint8Array([0, 97, 115, 109])
+
+    try {
+      const whenInstance = await createInstance(givenWasmBuffer, givenOptions)
+      writeNullTerminatedUtf8(whenInstance.getMemory(), givenPointers.logPtr, MAX_LOG_SIZE, 'log-message')
+      if (capturedImports?.env && typeof capturedImports.env === 'object') {
+        const hostLog = (capturedImports.env as { hostLog?: () => void }).hostLog
+        hostLog?.()
+      }
+      expect(givenLog).toHaveBeenCalledWith('log-message')
+      writeNullTerminatedUtf8(whenInstance.getMemory(), givenPointers.errorPtr, MAX_ERROR_SIZE, 'boom')
+      expect(() => whenInstance.handleError(() => 1)).toThrowError('boom')
+    } finally {
+      ;(globalThis as { Buffer?: typeof Buffer }).Buffer = originalBuffer
+    }
 
     instantiateMock.mockRestore()
   })

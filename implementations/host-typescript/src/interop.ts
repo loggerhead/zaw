@@ -1,12 +1,14 @@
 import { Reader, Writer } from './conduit'
-import { DEFAULT_INITIAL_PAGES, MAX_ERROR_SIZE, MAX_LOG_SIZE } from './constants'
+import { DEFAULT_INITIAL_PAGES, MAX_ERROR_SIZE, MAX_LOG_SIZE, PAGE_SIZE } from './constants'
 import { generateBinding } from './binding'
-import { ZawReturn } from './types'
+import type { ZawReturn } from './types'
 
 export type InstanceOptions = {
   inputChannelSize: number
   outputChannelSize: number
   initialMemoryPages?: number
+  imports?: WebAssembly.Imports
+  memory?: WebAssembly.Memory
   log?: (message: string) => void
 }
 
@@ -36,24 +38,35 @@ export type Instance<T extends Record<string, unknown>> = {
 }
 
 export async function createInstance<T extends Record<string, unknown>>(
-  wasmBuffer: Buffer,
+  wasmBuffer: BufferSource,
   options: InstanceOptions,
 ): Promise<Instance<T>> {
-  const { inputChannelSize, outputChannelSize, initialMemoryPages = DEFAULT_INITIAL_PAGES, log = console.log.bind(console) } = options
-  const memory = new WebAssembly.Memory({ initial: initialMemoryPages })
-
-  const imports = {
-    env: {
-      memory,
-      hostLog: () => {
-        hostLog() // has to be hoisted
-      },
+  const {
+    inputChannelSize,
+    outputChannelSize,
+    initialMemoryPages = DEFAULT_INITIAL_PAGES,
+    log = console.log.bind(console),
+    imports,
+    memory: providedMemory,
+  } = options
+  let memory = providedMemory ?? new WebAssembly.Memory({ initial: initialMemoryPages })
+  const baseImports = imports ?? {}
+  const env = {
+    ...(baseImports.env ?? {}),
+    memory,
+    hostLog: () => {
+      hostLog() // has to be hoisted
     },
   }
+  const finalImports = { ...baseImports, env }
 
-  const { instance } = await WebAssembly.instantiate(wasmBuffer, imports)
+  const { instance } = await WebAssembly.instantiate(wasmBuffer, finalImports)
 
   const exports = instance.exports as ExportBase & T
+  const exportedMemory = (instance.exports as any).memory as WebAssembly.Memory | undefined
+  if (exportedMemory && exportedMemory !== memory) {
+    memory = exportedMemory
+  }
 
   const createView = <T>(createFunc: (buffer: ArrayBuffer) => T): (() => T) => {
     let buffer: ArrayBuffer
@@ -73,6 +86,19 @@ export async function createInstance<T extends Record<string, unknown>>(
   const errPtr = exports.getErrorPtr()
   const inputPtr = exports.allocateInputChannel(inputChannelSize)
   const outputPtr = exports.allocateOutputChannel(outputChannelSize)
+  const requiredBytes = Math.max(
+    inputPtr + inputChannelSize,
+    outputPtr + outputChannelSize,
+    logPtr + MAX_LOG_SIZE,
+    errPtr + MAX_ERROR_SIZE,
+  )
+  if (memory.buffer.byteLength < requiredBytes) {
+    const delta = requiredBytes - memory.buffer.byteLength
+    const additionalPages = Math.ceil(delta / PAGE_SIZE)
+    if (additionalPages > 0) {
+      memory.grow(additionalPages)
+    }
+  }
 
   const getBytes = createView(buffer => new Uint8ClampedArray(buffer))
   const getLogData = createView(buffer => new Uint8ClampedArray(buffer, logPtr, MAX_LOG_SIZE))
@@ -80,11 +106,12 @@ export async function createInstance<T extends Record<string, unknown>>(
   const getInputChannel = createView(buffer => new Writer(buffer, inputPtr, inputChannelSize))
   const getOutputChannel = createView(buffer => new Reader(buffer, outputPtr, outputChannelSize))
 
+  const decoder = new TextDecoder()
   const hostLog = (): void => {
     const data = getLogData()
     const length = data.indexOf(0)
     const messageLength = length === -1 ? data.length : length
-    const message = Buffer.from(data.subarray(0, messageLength)).toString('utf8')
+    const message = decoder.decode(data.subarray(0, messageLength))
 
     log(message)
   }
@@ -95,7 +122,7 @@ export async function createInstance<T extends Record<string, unknown>>(
     const messageLength = length === -1 ? data.length : length
 
     if (messageLength > 0) {
-      const message = Buffer.from(data.subarray(0, messageLength)).toString('utf8')
+      const message = decoder.decode(data.subarray(0, messageLength))
 
       throw Error(message)
     } else if (e !== undefined) {
