@@ -14,7 +14,9 @@ jobs:
       - name: Create Zig package
         run: |
           mkdir zig-package
-          cp -r implementations/wasm-zig/* zig-package/
+          cp build.zig build.zig.zon zig-package/
+          mkdir -p zig-package/implementations/wasm-zig
+          cp -r implementations/wasm-zig/src zig-package/implementations/wasm-zig/
           cd zig-package
           tar --transform='s|^\./||' -czf ../zaw-wasm.tar.gz .
 

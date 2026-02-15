@@ -3,5 +3,5 @@
 set -e;
 ROOT="$(dirname $(realpath $0))/..";
 
-cd $ROOT/implementations/wasm-zig
+cd $ROOT
 zig build test --summary all
