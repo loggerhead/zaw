@@ -83,7 +83,8 @@ export async function createInstance<T extends Record<string, unknown>>(
   const hostLog = (): void => {
     const data = getLogData()
     const length = data.indexOf(0)
-    const message = Buffer.from(data.subarray(0, length)).toString('utf8')
+    const messageLength = length === -1 ? data.length : length
+    const message = Buffer.from(data.subarray(0, messageLength)).toString('utf8')
 
     log(message)
   }
@@ -91,9 +92,10 @@ export async function createInstance<T extends Record<string, unknown>>(
   const throwWasmError = (e?: Error): void => {
     const data = getErrorData()
     const length = data.indexOf(0)
+    const messageLength = length === -1 ? data.length : length
 
-    if (length > 0) {
-      const message = Buffer.from(data.subarray(0, length)).toString('utf8')
+    if (messageLength > 0) {
+      const message = Buffer.from(data.subarray(0, messageLength)).toString('utf8')
 
       throw Error(message)
     } else if (e !== undefined) {

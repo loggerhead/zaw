@@ -50,7 +50,7 @@ const Channel = struct {
     ///
     /// Panics if the offset has exceeded the buffer capacity.
     fn checkOffset(self: *Self) void {
-        if (self._offset >= self._storageUint8.len) {
+        if (self._offset > self._storageUint8.len) {
             @branchHint(.cold);
             @panic("Channel out of bounds");
         }
@@ -100,15 +100,27 @@ const Channel = struct {
     pub inline fn getOffset(self: *Self, comptime T: type) u32 {
         switch (T) {
             u8 => {
+                if (self._offset >= self._storageUint8.len) {
+                    @branchHint(.cold);
+                    @panic("Channel out of bounds");
+                }
                 return self._offset;
             },
             u32, i32, f32 => {
                 self.alignTo(T);
+                if (self._offset + 4 > self._storageUint8.len) {
+                    @branchHint(.cold);
+                    @panic("Channel out of bounds");
+                }
 
                 return self._offset >> 2;
             },
             f64 => {
                 self.alignTo(T);
+                if (self._offset + 8 > self._storageUint8.len) {
+                    @branchHint(.cold);
+                    @panic("Channel out of bounds");
+                }
 
                 return self._offset >> 3;
             },

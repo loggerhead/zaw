@@ -1,6 +1,8 @@
 import assert from 'assert'
 
 const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
+const asciiDecoder = new TextDecoder('latin1')
 
 function alignUp(x: number, bytes: 4 | 8): number {
   const mask = bytes - 1
@@ -428,7 +430,7 @@ export class Reader extends Channel {
   readAsciiString(): string {
     const data = this.readUint8Array()
 
-    return String.fromCharCode(...data)
+    return asciiDecoder.decode(data)
   }
 
   readAsciiStrings(count: number): string[] {
@@ -443,9 +445,8 @@ export class Reader extends Channel {
 
   readUtf8String(): string {
     const data = this.readUint8Array()
-    const decoder = new TextDecoder()
 
-    return decoder.decode(data)
+    return textDecoder.decode(data)
   }
 
   readUtf8Strings(count: number): string[] {

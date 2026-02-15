@@ -15,7 +15,15 @@ pub fn log(msg: []const u8) void {
 }
 
 pub fn logf(comptime fmt: []const u8, args: anytype) void {
-    const data = std.fmt.bufPrint(logStorage[0..], fmt, args) catch unreachable;
+    const buf = logStorage[0 .. logStorage.len - 1];
+    const data = std.fmt.bufPrint(buf, fmt, args) catch |err| switch (err) {
+        error.NoSpaceLeft => {
+            logStorage[logStorage.len - 1] = 0;
+            externs.hostLog();
+            return;
+        },
+        else => unreachable,
+    };
     logStorage[data.len] = 0;
     externs.hostLog();
 }

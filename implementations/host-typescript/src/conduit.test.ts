@@ -1711,4 +1711,261 @@ describe('Channel Protocol Tests', () => {
     expect(reader.readFloat32()).toEqual(-3.4028234663852886e+38);
   });
 
+  test('GivenUTF8字符串 When写入并读取 Then返回原字符串', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValue = '你好🌍';
+    givenWriter.reset();
+
+    givenWriter.writeUtf8String(givenValue);
+
+    givenReader.reset();
+    const whenValue = givenReader.readUtf8String();
+
+    expect(whenValue).toEqual(givenValue);
+  });
+
+  test('Given多个UTF8字符串 When写入并批量读取 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = ['a', 'こんにちは', '🚀'];
+    givenWriter.reset();
+
+    givenWriter.writeUtf8String(givenValues[0]);
+    givenWriter.writeUtf8String(givenValues[1]);
+    givenWriter.writeUtf8String(givenValues[2]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readUtf8Strings(givenValues.length);
+
+    expect(whenValues).toEqual(givenValues);
+  });
+
+  test('GivenASCII字符串 When写入并读取 Then返回原字符串', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValue = 'hello';
+    givenWriter.reset();
+
+    givenWriter.writeAsciiString(givenValue);
+
+    givenReader.reset();
+    const whenValue = givenReader.readAsciiString();
+
+    expect(whenValue).toEqual(givenValue);
+  });
+
+  test('Given多个ASCII字符串 When写入并批量读取 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = ['a', 'bcd', 'xyz'];
+    givenWriter.reset();
+
+    givenWriter.writeAsciiString(givenValues[0]);
+    givenWriter.writeAsciiString(givenValues[1]);
+    givenWriter.writeAsciiString(givenValues[2]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readAsciiStrings(givenValues.length);
+
+    expect(whenValues).toEqual(givenValues);
+  });
+
+  test('Given多个Float32数组 When写入并读取数组列表 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = [
+      new Float32Array([1.5, -2.25]),
+      new Float32Array([3.125]),
+    ];
+    givenWriter.reset();
+
+    const first = givenWriter.initFloat32Array(givenValues[0].length);
+    first.set(givenValues[0]);
+    const second = givenWriter.initFloat32Array(givenValues[1].length);
+    second.set(givenValues[1]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readFloat32Arrays(givenValues.length);
+
+    expect(Array.from(whenValues[0])).toEqual(Array.from(givenValues[0]));
+    expect(Array.from(whenValues[1])).toEqual(Array.from(givenValues[1]));
+  });
+
+  test('Given多个Float64数组 When写入并读取数组列表 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = [
+      new Float64Array([1.25, 2.5]),
+      new Float64Array([-3.75]),
+    ];
+    givenWriter.reset();
+
+    const first = givenWriter.initFloat64Array(givenValues[0].length);
+    first.set(givenValues[0]);
+    const second = givenWriter.initFloat64Array(givenValues[1].length);
+    second.set(givenValues[1]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readFloat64Arrays(givenValues.length);
+
+    expect(Array.from(whenValues[0])).toEqual(Array.from(givenValues[0]));
+    expect(Array.from(whenValues[1])).toEqual(Array.from(givenValues[1]));
+  });
+
+  test('Given多个Uint32数组 When写入并读取数组列表 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = [
+      new Uint32Array([1, 2, 3]),
+      new Uint32Array([99]),
+    ];
+    givenWriter.reset();
+
+    const first = givenWriter.initUint32Array(givenValues[0].length);
+    first.set(givenValues[0]);
+    const second = givenWriter.initUint32Array(givenValues[1].length);
+    second.set(givenValues[1]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readUint32Arrays(givenValues.length);
+
+    expect(Array.from(whenValues[0])).toEqual(Array.from(givenValues[0]));
+    expect(Array.from(whenValues[1])).toEqual(Array.from(givenValues[1]));
+  });
+
+  test('Given多个Int32数组 When写入并读取数组列表 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = [
+      new Int32Array([-1, 0, 1]),
+      new Int32Array([42]),
+    ];
+    givenWriter.reset();
+
+    const first = givenWriter.initInt32Array(givenValues[0].length);
+    first.set(givenValues[0]);
+    const second = givenWriter.initInt32Array(givenValues[1].length);
+    second.set(givenValues[1]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readInt32Arrays(givenValues.length);
+
+    expect(Array.from(whenValues[0])).toEqual(Array.from(givenValues[0]));
+    expect(Array.from(whenValues[1])).toEqual(Array.from(givenValues[1]));
+  });
+
+  test('Given超出容量的前进步长 When推进偏移 Then抛出越界错误', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const givenWriter = new Writer(givenBuffer);
+
+    const whenAdvance = () => givenWriter.advance8(9);
+
+    expect(whenAdvance).toThrowError('Reached end of channel');
+  });
+
+  test('Given多个Uint8数组 When写入并读取数组列表 Then逐个匹配', () => {
+    const givenBuffer = new ArrayBuffer(1024);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+    const givenValues = [
+      new Uint8Array([1, 2]),
+      new Uint8Array([3, 4, 5]),
+    ];
+    givenWriter.reset();
+
+    const first = givenWriter.initUint8Array(givenValues[0].length);
+    first.set(givenValues[0]);
+    const second = givenWriter.initUint8Array(givenValues[1].length);
+    second.set(givenValues[1]);
+
+    givenReader.reset();
+    const whenValues = givenReader.readUint8Arrays(givenValues.length);
+
+    expect(Array.from(whenValues[0])).toEqual(Array.from(givenValues[0]));
+    expect(Array.from(whenValues[1])).toEqual(Array.from(givenValues[1]));
+  });
+
+  test('Given小容量buffer When写入多次Uint32 Then抛出越界错误', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const givenWriter = new Writer(givenBuffer);
+
+    givenWriter.writeUint32(1);
+    givenWriter.writeUint32(2);
+
+    expect(() => givenWriter.writeUint32(3)).toThrowError('Reached end of channel');
+  });
+
+  test('Given小容量buffer When写入过长Uint8Array Then抛出越界错误', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const givenWriter = new Writer(givenBuffer);
+
+    expect(() => givenWriter.copyUint8Array(new Uint8Array(9))).toThrowError('Reached end of channel');
+  });
+
+  test('Given小容量buffer When读取过多Uint32 Then抛出越界错误', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const givenReader = new Reader(givenBuffer);
+
+    expect(givenReader.readUint32()).toEqual(0);
+    expect(givenReader.readUint32()).toEqual(0);
+    expect(() => givenReader.readUint32()).toThrowError('Reached end of channel');
+  });
+
+  test('Given刚好填满容量的Uint8Array When写入并读取 Then正常返回', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+
+    const arr = new Uint8Array([1, 2, 3, 4]);
+    const view = givenWriter.initUint8Array(arr.length);
+    view.set(arr);
+
+    givenReader.reset();
+    const whenValue = givenReader.readUint8Array();
+
+    expect(Array.from(whenValue)).toEqual(Array.from(arr));
+  });
+
+  test('Given刚好填满容量的Uint32Array When写入并读取 Then正常返回', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const givenWriter = new Writer(givenBuffer);
+    const givenReader = new Reader(givenBuffer);
+
+    const arr = new Uint32Array([0x11223344]);
+    const view = givenWriter.initUint32Array(arr.length);
+    view.set(arr);
+
+    givenReader.reset();
+    const whenValue = givenReader.readUint32Array();
+
+    expect(Array.from(whenValue)).toEqual(Array.from(arr));
+  });
+
+  test('Given过大长度前缀 When读取Uint8Array Then抛出越界错误', () => {
+    const givenBuffer = new ArrayBuffer(8);
+    const view = new DataView(givenBuffer);
+    view.setUint32(0, 10, true);
+
+    const givenReader = new Reader(givenBuffer);
+    expect(() => givenReader.readUint8Array()).toThrowError('Reached end of channel');
+  });
+
+  test('Given极大长度前缀 When读取Float64Array Then抛出越界错误', () => {
+    const givenBuffer = new ArrayBuffer(16);
+    const view = new DataView(givenBuffer);
+    view.setUint32(0, 0xffffffff, true);
+
+    const givenReader = new Reader(givenBuffer);
+    expect(() => givenReader.readFloat64Array()).toThrowError('Reached end of channel');
+  });
+
 });

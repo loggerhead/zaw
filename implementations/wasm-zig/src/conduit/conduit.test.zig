@@ -1186,3 +1186,91 @@ test "Float32 extreme values" {
     try expectEqual(1.175494e-38, reader.read(f32));
     try expectEqual(-3.4028235e+38, reader.read(f32));
 }
+
+test "Exact capacity Uint8 writes" {
+    var storage = [_]u64{0} ** 1;
+    var writer = Writer.from(&storage);
+    var reader = Reader.from(&storage);
+
+    writer.write(u8, 1);
+    writer.write(u8, 2);
+    writer.write(u8, 3);
+    writer.write(u8, 4);
+    writer.write(u8, 5);
+    writer.write(u8, 6);
+    writer.write(u8, 7);
+    writer.write(u8, 8);
+
+    const expected = [_]u8{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    try expectEqualSlices(u8, &expected, writer.channel.storage(u8)[0..8]);
+
+    try expectEqual(1, reader.read(u8));
+    try expectEqual(2, reader.read(u8));
+    try expectEqual(3, reader.read(u8));
+    try expectEqual(4, reader.read(u8));
+    try expectEqual(5, reader.read(u8));
+    try expectEqual(6, reader.read(u8));
+    try expectEqual(7, reader.read(u8));
+    try expectEqual(8, reader.read(u8));
+}
+
+test "Aligned write at buffer boundary" {
+    var storage = [_]u64{0} ** 1;
+    var writer = Writer.from(&storage);
+    var reader = Reader.from(&storage);
+
+    writer.write(u8, 1);
+    writer.write(u32, 0x11223344);
+
+    const expected = [_]u8{ 1, 0, 0, 0, 68, 51, 34, 17 };
+    try expectEqualSlices(u8, &expected, writer.channel.storage(u8)[0..8]);
+
+    try expectEqual(1, reader.read(u8));
+    try expectEqual(0x11223344, reader.read(u32));
+}
+
+test "Exact capacity Uint8 array" {
+    var storage = [_]u64{0} ** 1;
+    var writer = Writer.from(&storage);
+    var reader = Reader.from(&storage);
+
+    const arr = writer.initArray(u8, 4);
+    arr[0] = 1;
+    arr[1] = 2;
+    arr[2] = 3;
+    arr[3] = 4;
+
+    const expected = [_]u8{ 4, 0, 0, 0, 1, 2, 3, 4 };
+    try expectEqualSlices(u8, &expected, writer.channel.storage(u8)[0..8]);
+
+    try expectEqualSlices(u8, arr, reader.readArray(u8));
+}
+
+test "Exact capacity Uint32 array" {
+    var storage = [_]u64{0} ** 1;
+    var writer = Writer.from(&storage);
+    var reader = Reader.from(&storage);
+
+    const arr = writer.initArray(u32, 1);
+    arr[0] = 0x11223344;
+
+    const expected = [_]u8{ 1, 0, 0, 0, 68, 51, 34, 17 };
+    try expectEqualSlices(u8, &expected, writer.channel.storage(u8)[0..8]);
+
+    try expectEqualSlices(u32, arr, reader.readArray(u32));
+}
+
+test "Aligned f64 write with padding" {
+    var storage = [_]u64{0} ** 2;
+    var writer = Writer.from(&storage);
+    var reader = Reader.from(&storage);
+
+    writer.write(u8, 5);
+    writer.write(f64, 3.14159);
+
+    const expected = [_]u8{ 5, 0, 0, 0, 0, 0, 0, 0, 110, 134, 27, 240, 249, 33, 9, 64 };
+    try expectEqualSlices(u8, &expected, writer.channel.storage(u8)[0..16]);
+
+    try expectEqual(5, reader.read(u8));
+    try expectEqual(3.14159, reader.read(f64));
+}

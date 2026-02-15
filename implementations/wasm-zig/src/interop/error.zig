@@ -21,7 +21,19 @@ fn _writeFormat(comptime fmt: []const u8, args: anytype) void {
     Stack.push(@src());
     defer Stack.pop();
 
-    const data = std.fmt.bufPrint(errStorage[cursor..], fmt, args) catch unreachable;
+    if (cursor >= errStorage.len) {
+        return;
+    }
+
+    const buf = errStorage[cursor .. errStorage.len - 1];
+    const data = std.fmt.bufPrint(buf, fmt, args) catch |err| switch (err) {
+        error.NoSpaceLeft => {
+            cursor = errStorage.len - 1;
+            errStorage[cursor] = 0;
+            return;
+        },
+        else => unreachable,
+    };
 
     cursor += data.len;
 

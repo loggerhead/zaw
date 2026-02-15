@@ -167,6 +167,9 @@ export fn multiply4x4Float32() i32 {
 
     const a_matrices = input.readArray(f32);
     const b_matrices = input.readArray(f32);
+    if (a_matrices.len != b_matrices.len or a_matrices.len % 16 != 0) {
+        return Error.serializeMessage(@src(), "Invalid matrix lengths");
+    }
     const num_matrices = a_matrices.len / 16;
 
     var result_matrices = output.initArray(f32, a_matrices.len);
