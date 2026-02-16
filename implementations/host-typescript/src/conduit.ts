@@ -448,7 +448,8 @@ export class Reader extends Channel {
   }
 
   readUtf8String(): string {
-    const data = this.readUint8Array()
+    const length = this.readUint32()
+    const data = this.readUint8Elements(length)
 
     return textDecoder.decode(data)
   }
